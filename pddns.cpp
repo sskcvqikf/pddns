@@ -1,10 +1,13 @@
 #include <iostream>
-#include "dns_packet.h"
+#include <iomanip>
+
 #include <unistd.h>
 
 #include <pd/pdargs.h>
 
 #include <boost/asio.hpp>
+
+#include "dns_packet.h"
 
 uint16_t get_pid()
 {
@@ -44,14 +47,39 @@ std::array<char, 512> get_request(const std::vector<char>& ser) {
   return ret;
 }
 
+void print_help(char* exe) {
+  std::cout << "Poorly designed DNS client.\n";
+  
+  auto print_entry = [](std::string_view spec,
+                        std::string_view desc)
+  {
+    std::cout << std::left << "  "
+              << std::setw(26) << spec
+              << desc << '\n';
+  };
+  std::cout << "Usage: " << exe
+            << " [options] " << "--hostname <hostname>\n"
+            << "Options:\n";
+  print_entry("--help, -h", "show this message");
+  print_entry("--hostname, -H <hostname>", "hostname to resolve");
+  print_entry("--server, -s <server ip>", "server ip to query");
+  print_entry("--port, -p <port>", "port of server");
+}
+
 int main(int argc, char** argv) {
   using boost::asio::io_context;
   using boost::asio::ip::udp;
   
   pd::pdargs args(argc, argv);
   
-  auto maybe_server_address = args.get<boost::asio::ip::address_v4>({"address", 'a'});
-  auto hostname = args.get<std::string>({"hostname", 'h'});
+  auto is_help = args.get<bool>({"help", 'h'});
+  if (is_help) {
+    print_help(argv[0]);
+    return 0;
+  }
+  
+  auto maybe_server_address = args.get<boost::asio::ip::address_v4>({"server", 's'});
+  auto hostname = args.get<std::string>({"hostname", 'H'});
   auto port = args.get_or<uint32_t>({"port", 'p'}, 53u);
   
   if (!hostname.has_value()){
