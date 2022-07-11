@@ -1,21 +1,21 @@
 #ifndef PDDNS__DNS_PACKET_H_
 #define PDDNS__DNS_PACKET_H_
 
-#include <cstdint>
-#include <vector>
-#include <sstream>
-#include <iostream>
 #include <algorithm>
+#include <cstdint>
+#include <iostream>
+#include <sstream>
+#include <vector>
 
 #include "utils.h"
 
 // Types of DNS resource records
-constexpr uint16_t T_A = 1;     // Ipv4 address
-constexpr uint16_t T_NS = 2;    // Nameserver
-constexpr uint16_t T_CNAME = 5; // canonical name
-constexpr uint16_t T_SOA = 6;   // start of authority zone
-constexpr uint16_t T_PTR = 12;  // domain name pointer
-constexpr uint16_t T_MX = 15;   // Mail server
+constexpr uint16_t T_A = 1;      // Ipv4 address
+constexpr uint16_t T_NS = 2;     // Nameserver
+constexpr uint16_t T_CNAME = 5;  // canonical name
+constexpr uint16_t T_SOA = 6;    // start of authority zone
+constexpr uint16_t T_PTR = 12;   // domain name pointer
+constexpr uint16_t T_MX = 15;    // Mail server
 
 /**
  * -/-/-/-/-/-/-/-/-/-/-/-/   DNS HEADER (FLAGS)   -/-/-/-/-/-/-/-/-/-/-/-/-/-/
@@ -32,75 +32,43 @@ constexpr uint16_t T_MX = 15;   // Mail server
  *         DNS server supports recursion                                       1
  * Z       Zero, reserved for future use                                       3
  * RCODE 	Response code, can be NOERROR (0), FORMERR (1, Format error),
- *              SERVFAIL (2), NXDOMAIN (3, Nonexistent domain), etc.           4 
+ *              SERVFAIL (2), NXDOMAIN (3, Nonexistent domain), etc.           4
  */
 
 struct dns_header_t {
   uint16_t data = 0;
-  
-  uint16_t qr() const noexcept {
-    return (data & 0b1000000000000000) >> 15;
-  }
-  
-  uint16_t opcode() const noexcept {
-    return (data & 0b0111100000000000) >> 11;
-  }
-  
-  uint16_t aa() const noexcept {
-    return (data & 0b0000010000000000) >> 10;
-  }
 
-  uint16_t tc() const noexcept {
-    return (data & 0b0000001000000000) >> 9;
-  }
-  
-  uint16_t rd() const noexcept {
-    return (data & 0b0000000100000000) >> 8;
-  }
+  uint16_t qr() const noexcept { return (data & 0b1000000000000000) >> 15; }
 
-  uint16_t ra() const noexcept {
-    return (data & 0b0000000010000000) >> 7;
-  }
-  
-  uint16_t zero() const noexcept {
-    return (data & 0b0000000001110000) >> 4;
-  }
-  
-  uint16_t rcode() const noexcept {
-    return (data & 0b0000000000001111);
-  }
-  
-  void set_qr(uint16_t const val) noexcept {
-    data |= val << 15; 
-  }
+  uint16_t opcode() const noexcept { return (data & 0b0111100000000000) >> 11; }
 
-  void set_opcode(uint16_t const val) noexcept {
-    data |= val << 11;
-  }
+  uint16_t aa() const noexcept { return (data & 0b0000010000000000) >> 10; }
 
-  void set_aa(uint16_t const val) noexcept {
-    data |= val << 10;
-  }
+  uint16_t tc() const noexcept { return (data & 0b0000001000000000) >> 9; }
 
-  void set_tc(uint16_t const val) noexcept {
-    data |= val << 9;
-  }
+  uint16_t rd() const noexcept { return (data & 0b0000000100000000) >> 8; }
 
-  void set_rd(uint16_t const val) noexcept {
-    data |= val << 8;
-  }
+  uint16_t ra() const noexcept { return (data & 0b0000000010000000) >> 7; }
 
-  void set_ra(uint16_t const val) noexcept {
-    data |= val << 7;
-  }
+  uint16_t zero() const noexcept { return (data & 0b0000000001110000) >> 4; }
 
-  void set_zero(uint16_t const val) noexcept {
-    data |= val << 4;
-  }
+  uint16_t rcode() const noexcept { return (data & 0b0000000000001111); }
 
-  void set_rcode(uint16_t const val) noexcept {
-    data |= val;
-  }
+  void set_qr(uint16_t const val) noexcept { data |= val << 15; }
+
+  void set_opcode(uint16_t const val) noexcept { data |= val << 11; }
+
+  void set_aa(uint16_t const val) noexcept { data |= val << 10; }
+
+  void set_tc(uint16_t const val) noexcept { data |= val << 9; }
+
+  void set_rd(uint16_t const val) noexcept { data |= val << 8; }
+
+  void set_ra(uint16_t const val) noexcept { data |= val << 7; }
+
+  void set_zero(uint16_t const val) noexcept { data |= val << 4; }
+
+  void set_rcode(uint16_t const val) noexcept { data |= val; }
 };
 
 struct question_t {
@@ -114,7 +82,7 @@ struct record_t {
   uint16_t type = 0;
   uint16_t klass = 0;
   uint32_t ttl = 0;
-  uint16_t len = 0; 
+  uint16_t len = 0;
 };
 
 struct type_a_record_t {
@@ -131,7 +99,7 @@ struct dns_packet_t {
   uint16_t n_additional = 0;
   std::vector<question_t> questions;
   std::vector<type_a_record_t> answers;
-  
+
   [[nodiscard]] std::vector<char> serialize_query() const {
     std::vector<char> ret;
     merge(ret, ::serialize(id));
@@ -140,17 +108,16 @@ struct dns_packet_t {
     merge(ret, ::serialize(n_answers));
     merge(ret, ::serialize(n_authority));
     merge(ret, ::serialize(n_additional));
-    
-    for(auto&& i : questions)
-    {
+
+    for (auto&& i : questions) {
       merge(ret, i.domain_name);
       merge(ret, ::serialize(i.type));
       merge(ret, ::serialize(i.klass));
     }
-    
+
     return ret;
   }
-  
+
   [[nodiscard]] static dns_packet_t parse(std::vector<char> data) {
     dns_packet_t ret;
     ret.id = extract<uint16_t>(data);
@@ -163,17 +130,19 @@ struct dns_packet_t {
       question_t question;
       auto nullterm = std::find(data.cbegin(), data.cend(), char(0));
       auto sz = std::distance(data.cbegin(), nullterm);
-      question.domain_name = extract(data, sz); // NOLINT: no way sz will overflow int
+      question.domain_name =
+          extract(data, sz);  // NOLINT: no way sz will overflow int
       question.type = extract<uint16_t>(data);
       question.klass = extract<uint16_t>(data);
       ret.questions.push_back(std::move(question));
     }
-    
+
     for (int i = 0; i != ret.n_answers; ++i) {
       type_a_record_t answer;
       auto nullterm = std::find(data.cbegin(), data.cend(), char(0));
       auto sz = std::distance(data.cbegin(), nullterm);
-      answer.record.domain_name = extract(data, sz); // NOLINT: no way sz will overflow int
+      answer.record.domain_name =
+          extract(data, sz);  // NOLINT: no way sz will overflow int
       answer.record.type = extract<uint16_t>(data);
       answer.record.klass = extract<uint16_t>(data);
       answer.record.ttl = extract<uint32_t>(data);
@@ -181,7 +150,7 @@ struct dns_packet_t {
       answer.ip = htonl(extract<uint32_t>(data));
       ret.answers.push_back(std::move(answer));
     }
-    
+
     return ret;
   }
 };
