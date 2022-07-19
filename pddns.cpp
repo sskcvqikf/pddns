@@ -57,8 +57,9 @@ void print_help(char* exe) {
   print_entry("--port, -p <port>", "port of server");
 }
 
-std::string resolv(const std::string& host,
-                   const boost::asio::ip::address_v4& address, uint32_t port) {
+std::vector<std::string> resolv(const std::string& host,
+                                const boost::asio::ip::address_v4& address,
+                                uint32_t port) {
   using boost::asio::io_context;
   using boost::asio::ip::udp;
 
@@ -79,10 +80,12 @@ std::string resolv(const std::string& host,
 
   auto dns_response = dns_packet_t::parse({response.cbegin(), response.cend()});
 
-  in_addr resolved_address;
-  resolved_address.s_addr = dns_response.answers[0].ip;
-  auto resolved_ptr = inet_ntoa(resolved_address);
-  std::string ret = resolved_ptr;
+  in_addr resolved_address = {0};
+  std::vector<std::string> ret;
+  for (int i = 0; i != dns_response.n_answers; ++i) {
+    resolved_address.s_addr = dns_response.answers[0].ip;
+    ret.emplace_back(inet_ntoa(resolved_address));
+  }
   return ret;
 }
 
@@ -118,7 +121,10 @@ int main(int argc, char** argv) {
   }
 
   for (auto&& host : hosts) {
-    std::cout << resolv(host, server_address, port) << '\n';
+    std::cout << "IP for " << host << ":\n";
+    for (auto&& ip : resolv(host, server_address, port)) {
+      std::cout << "  " << ip << '\n';
+    }
   }
 
   return 0;
