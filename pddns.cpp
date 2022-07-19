@@ -57,6 +57,35 @@ void print_help(char* exe) {
   print_entry("--port, -p <port>", "port of server");
 }
 
+std::string resolv(const std::string& host,
+                   const boost::asio::ip::address_v4& address, uint32_t port) {
+  using boost::asio::io_context;
+  using boost::asio::ip::udp;
+
+  io_context ioc;
+  udp::socket sock(ioc);
+  boost::asio::ip::udp::endpoint endpoint(address, port);
+  sock.connect(endpoint);
+
+  auto dns_request = make_basic_query(host);
+  auto request = get_request(dns_request.serialize_query());
+
+  sock.send(boost::asio::buffer(request, 512));
+
+  std::array<char, 512> response = {0};
+  udp::endpoint sender_endpoint;
+  size_t response_length =
+      sock.receive_from(boost::asio::buffer(response, 512), sender_endpoint);
+
+  auto dns_response = dns_packet_t::parse({response.cbegin(), response.cend()});
+
+  in_addr resolved_address;
+  resolved_address.s_addr = dns_response.answers[0].ip;
+  auto resolved_ptr = inet_ntoa(resolved_address);
+  std::string ret = resolved_ptr;
+  return ret;
+}
+
 int main(int argc, char** argv) {
   using boost::asio::io_context;
   using boost::asio::ip::udp;
@@ -71,13 +100,7 @@ int main(int argc, char** argv) {
 
   auto maybe_server_address =
       args.get<boost::asio::ip::address_v4>({"server", 's'});
-  auto hostname = args.get<std::string>({"hostname", 'H'});
   auto port = args.get_or<uint32_t>({"port", 'p'}, 53u);
-
-  if (!hostname.has_value()) {
-    std::cout << "You have to provide hostname to lookup!\n";
-    exit(1);
-  }
 
   boost::asio::ip::address_v4 server_address;
   if (maybe_server_address.has_value()) {
@@ -87,26 +110,16 @@ int main(int argc, char** argv) {
         read_resolv_conf()[0]);  // TODO: what if multiple entries
   }
 
-  io_context ioc;
-  udp::socket sock(ioc);
-  boost::asio::ip::udp::endpoint endpoint(server_address, port);
-  sock.connect(endpoint);
+  auto hosts = std::move(args).get_unnamed_args();
 
-  auto dns_request = make_basic_query(*hostname);
-  auto request = get_request(dns_request.serialize_query());
+  if (hosts.empty()) {
+    std::cout << "You have to provide hostname to lookup!\n";
+    exit(1);
+  }
 
-  sock.send(boost::asio::buffer(request, 512));
-
-  std::array<char, 512> response = {0};
-  udp::endpoint sender_endpoint;
-  size_t response_length =
-      sock.receive_from(boost::asio::buffer(response, 512), sender_endpoint);
-
-  auto dns_response = dns_packet_t::parse({response.cbegin(), response.cend()});
-
-  in_addr resolved_address;
-  resolved_address.s_addr = dns_response.answers[0].ip;
-  std::cout << inet_ntoa(resolved_address) << '\n';
+  for (auto&& host : hosts) {
+    std::cout << resolv(host, server_address, port) << '\n';
+  }
 
   return 0;
 }
